@@ -1,163 +1,131 @@
-import cv2
-from ultralytics import YOLO
-import socket
-import json
+#include <iostream>
+#include <string>
+using namespace std;
 
-# LOAD MODEL YOLO
+// CLASS MISSION MANAGER
 
-model = YOLO("yolov8n.pt")
+class MissionManager {
+public:
 
-HOST = "127.0.0.1"
-PORT = 5000
-
-client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-try:
-    client.connect((HOST, PORT))
-    print("Terhubung ke Mission Manager!")
-except:
-    print("Tidak dapat terhubung ke Mission Manager")
-    client = None
+    string missionState;
 
 
-
-# CAMERA
-kamera = cv2.VideoCapture(0)
-
-if not kamera.isOpened():
-    print("Webcam tidak dapat dibuka")
-    exit()
-
-print("Webcam berhasil dibuka!")
-print("Tekan Q untuk keluar")
-
-# LOOP COMPUTER VISION
-
-while True:
-
-    berhasil, frame = kamera.read()
-
-    if not berhasil:
-        print("Gagal membaca webcam")
-        break
-
-    # YOLO DETECTION
-  
-    hasil = model(frame)
-
-    frame_hasil = hasil[0].plot()
-
-    # DEFAULT DATA
-    
-    objectName = "None"
-    confidence = 0.0
-    distance = 999.0
-
-
-    # AMBIL HASIL DETEKSI
-
-    boxes = hasil[0].boxes
-
-    if boxes is not None and len(boxes) > 0:
-
-        # Ambil object pertama
-        box = boxes[0]
-
-        # Confidence
-        confidence = float(box.conf[0])
-
-        # ID class
-        class_id = int(box.cls[0])
-
-        # Nama object
-        objectName = model.names[class_id]
-
-        # DISTANCE SEMENTARA
-        
-        # Untuk sementara distance
-        # ditentukan berdasarkan ukuran
-        # object pada kamera.
-
-        x1, y1, x2, y2 = box.xyxy[0]
-
-        tinggi_object = float(y2 - y1)
-
-        if tinggi_object > 300:
-            distance = 0.3
-
-        elif tinggi_object > 200:
-            distance = 1.0
-
-        elif tinggi_object > 100:
-            distance = 2.0
-
-        else:
-            distance = 5.0
-
-    # DATA YANG DIKIRIM KE C++
-    
-    data = {
-        "objectName": objectName,
-        "confidence": confidence,
-        "distance": distance
+    MissionManager() {
+        missionState = "IDLE";
     }
 
 
-    if client is not None:
+    // Fungsi untuk memperbarui kondisi misi
+    void updateMission(string objectName, double confidence, double distance) {
 
-        try:
+        // Tidak ada objek
+        if (objectName == "None") {
 
-            data_json = json.dumps(data)
+            missionState = "SEARCHING";
 
-            client.sendall(
-                (data_json + "\n").encode()
-            )
+        }
 
-        except:
-            print("Gagal mengirim data")
+        // Objek ditemukan dan confidence memenuhi syarat
+        else if (confidence >= 0.70) {
 
-    # TAMPILKAN DATA DI LAYAR
-    
-    cv2.putText(
-        frame_hasil,
-        f"Object: {objectName}",
-        (20, 40),
-        cv2.FONT_HERSHEY_SIMPLEX,
-        1,
-        (0, 255, 0),
-        2
-    )
+            // Sudah sangat dekat
+            if (distance <= 0.5) {
 
-    cv2.putText(
-        frame_hasil,
-        f"Confidence: {confidence:.2f}",
-        (20, 80),
-        cv2.FONT_HERSHEY_SIMPLEX,
-        1,
-        (0, 255, 0),
-        2
-    )
+                missionState = "MISSION_COMPLETE";
 
-    cv2.putText(
-        frame_hasil,
-        f"Distance: {distance:.2f} m",
-        (20, 120),
-        cv2.FONT_HERSHEY_SIMPLEX,
-        1,
-        (0, 255, 0),
-        2
-    )
+            }
 
-    # TAMPILKAN CAMERA
-    
-    cv2.imshow("ORCA Computer Vision", frame_hasil)
+            // Jarak <= 2 meter
+            else if (distance <= 2.0) {
 
-if cv2.waitKey(1) & 0xFF == ord("q"):
-        break
+                missionState = "APPROACHING";
+
+            }
+
+           
+
+                missionState = "DETECTED";
+
+            }
+        }
+
+        // Objek ada tetapi confidence terlalu rendah
+        else {
+
+            missionState = "SEARCHING";
+
+        }
+    }
 
 
-kamera.release()
-cv2.destroyAllWindows()
+    // Fungsi untuk menampilkan informasi misi
+    void showMission(string objectName, double confidence, double distance) {
 
-if client is not None:
-    client.close()
+        cout << "Object detected : " << objectName << endl;
+        cout << "Confidence      : " << confidence << endl;
+        cout << "Distance        : " << distance << " m" << endl;
+        cout << "Mission State   : " << missionState << endl;
+
+
+        // Menentukan aksi ORCA
+        if (missionState == "SEARCHING") {
+
+            cout << "Action          : SEARCH FOR TARGET" << endl;
+
+        }
+
+        else if (missionState == "DETECTED") {
+
+            cout << "Action          : APPROACH TARGET" << endl;
+
+        }
+
+        else if (missionState == "APPROACHING") {
+
+            cout << "Action          : CONTINUE APPROACHING" << endl;
+
+        }
+
+        else if (missionState == "MISSION_COMPLETE") {
+
+            cout << "Action          : MISSION COMPLETE" << endl;
+
+        }
+    }
+};
+
+// MAIN PROGRAM
+
+int main() {
+
+    string objectName;
+    double confidence;
+    double distance;
+
+
+    // Input dari sistem vision
+    cout << "INPUT Object : ";
+    cin >> objectName;
+
+    cout << "Confidence: ";
+    cin >> confidence;
+
+    cout << "Distance : ";
+    cin >> distance;
+
+
+    // Membuat object MissionManager
+    MissionManager mission;
+
+
+    // Memperbarui kondisi misi
+    mission.updateMission(objectName, confidence, distance);
+
+
+    // Menampilkan hasil
+    cout << endl;
+    mission.showMission(objectName, confidence, distance);
+
+
+    return 0;
+}
