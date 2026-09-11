@@ -1,0 +1,102 @@
+#include <iostream>
+#include <string>
+using namespace std;
+
+// PARENT CLASS
+
+class KomponenROV {
+public:
+    string nama;
+    string status;
+
+    virtual void info() {
+        cout << "Nama   : " << nama << endl;
+        cout << "Status : " << status << endl;
+    }
+};
+
+// CHILD CLASS THRUSTER
+
+class Thruster : public KomponenROV {
+public:
+    int power;
+
+    void info() override {
+        cout << "Nama   : " << nama << endl;
+        cout << "Status : " << status << endl;
+        cout << "Power  : " << power << endl;
+    }
+};
+
+// CHILD CLASS SENSOR
+
+class Sensor : public KomponenROV {
+public:
+    int nilai;
+
+    void info() override {
+        cout << "Nama   : " << nama << endl;
+        cout << "Status : " << status << endl;
+        cout << "Nilai  : " << nilai << endl;
+    }
+};
+
+// MAIN PROGRAM
+
+int main() {
+
+    int jumlah;
+
+    cout << "Masukkan jumlah komponen: ";
+    cin >> jumlah;
+
+    for (int i = 0; i < jumlah; i++) {
+
+        string jenis;
+        string nama;
+        string status;
+        int nilai;
+
+        cout << "\nKomponen ke-" << i + 1 << endl;
+
+        cout << "Jenis  (Sensor/Thruster) : ";
+        cin >> jenis;
+
+        cout << "Nama    : ";
+        cin >> nama;
+
+        cout << "Status  : ";
+        cin >> status;
+
+        cout << "Nilai   : ";
+        cin >> nilai;
+
+
+        // Kalau jenisnya Thruster
+        if (jenis == "Thruster") {
+
+            Thruster t;
+
+            t.nama = nama;
+            t.status = status;
+            t.power = nilai;
+
+            t.info();
+        }
+
+
+        // Kalau jenisnya Sensor
+        else if (jenis == "Sensor") {
+
+            Sensor s;
+
+            s.nama = nama;
+            s.status = status;
+            s.nilai = nilai;
+
+            s.info();
+        }
+    }
+
+    return 0;
+}
